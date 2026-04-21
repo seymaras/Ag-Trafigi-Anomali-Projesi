@@ -1,32 +1,20 @@
-# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Virtual environment
 .venv/
 venv/
-
-# Jupyter Notebook checkpoints
 .ipynb_checkpoints/
-
-# Mac system files
 .DS_Store
-
-# Data files (çok önemli!)
 data/raw/
 data/processed/
-
-# Model files
+data/raw/*
+!data/raw/.gitkeep
 *.pkl
 *.joblib
-
-# Logs
 *.log
-
-# VSCode
 .vscode/
-
-# Environment variables
 .env
+models/*.joblib
+reports/*.json
+reports/*.csv
