@@ -42,3 +42,30 @@ reports/
 tests/
 README.md
 requirements.txt
+
+## Model Performance
+
+### Model Comparison
+
+| Model | Accuracy | Precision | Recall | F1-score | ROC-AUC |
+|------|----------|-----------|--------|----------|---------|
+| Logistic Regression | 0.97 | 0.006 | 1.00 | 0.013 | 0.999 |
+| Random Forest | 0.9999 | 1.00 | 0.71 | 0.83 | 1.00 |
+
+Random Forest model significantly outperforms Logistic Regression in terms of balanced performance.
+
+---
+
+## 📈 Visualization
+
+### Confusion Matrix (Random Forest)
+![Confusion Matrix](reports/random_forest_confusion_matrix_20260427_175852.png)
+
+### ROC Curve
+![ROC Curve](reports/random_forest_roc_curve_20260427_175852.png)
+
+### Precision-Recall Curve
+![PR Curve](reports/random_forest_pr_curve_20260427_175852.png)
+
+### Feature Importance
+![Feature Importance](reports/random_forest_feature_importance_20260427_175852.png)
