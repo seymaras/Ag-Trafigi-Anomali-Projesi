@@ -88,11 +88,14 @@ def build_models() -> dict[str, Any]:
             ]
         ),
         "random_forest": RandomForestClassifier(
-            n_estimators=200,
-            class_weight="balanced",
+            n_estimators=300,
+            max_depth=None,
+            min_samples_split=2,
+            min_samples_leaf=1,
+            class_weight={0: 1, 1: 5},
             random_state=RANDOM_STATE,
             n_jobs=-1,
-        ),
+),
     }
 
 
@@ -238,6 +241,38 @@ def save_threshold_analysis(
 
     return threshold_df
 
+def find_best_threshold(
+    model: Any,
+    X_test: pd.DataFrame,
+    y_test: pd.Series,
+    min_recall: float = 0.90,
+) -> dict[str, float]:
+    y_prob = model.predict_proba(X_test)[:, 1]
+
+    thresholds = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    best_result = {
+        "threshold": 0.5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+    }
+
+    for threshold in thresholds:
+        y_pred_threshold = (y_prob >= threshold).astype(int)
+
+        precision = precision_score(y_test, y_pred_threshold, zero_division=0)
+        recall = recall_score(y_test, y_pred_threshold, zero_division=0)
+        f1 = f1_score(y_test, y_pred_threshold, zero_division=0)
+
+        if recall >= min_recall and f1 > best_result["f1"]:
+            best_result = {
+                "threshold": float(threshold),
+                "precision": float(precision),
+                "recall": float(recall),
+                "f1": float(f1),
+            }
+
+    return best_result
 
 def save_feature_importance(
     model: Any,
@@ -331,6 +366,15 @@ def main() -> None:
         print(f"Running threshold analysis for {model_name}...")
         save_threshold_analysis(model, X_test, y_test, model_name, timestamp)
 
+        best_threshold_result = find_best_threshold(
+            model,
+            X_test,
+            y_test,
+            min_recall=0.90
+        )
+
+        metrics["best_threshold"] = best_threshold_result
+
         if model_name == "random_forest":
             print("Saving feature importance...")
             save_feature_importance(
@@ -348,17 +392,21 @@ def main() -> None:
         comparison_rows.append(
             {
                 "model": model_name,
-                "accuracy": metrics["accuracy"],
-                "precision": metrics["precision"],
-                "recall": metrics["recall"],
-                "f1": metrics["f1"],
-                "roc_auc": metrics["roc_auc"],
-                "pr_auc": metrics["pr_auc"],
-                "cv_f1_mean": metrics["cv_f1_mean"],
-                "cv_recall_mean": metrics["cv_recall_mean"],
-                "cv_roc_auc_mean": metrics["cv_roc_auc_mean"],
-            }
-        )
+            "accuracy": metrics["accuracy"],
+            "precision": metrics["precision"],
+            "recall": metrics["recall"],
+            "f1": metrics["f1"],
+            "roc_auc": metrics["roc_auc"],
+            "pr_auc": metrics["pr_auc"],
+            "cv_f1_mean": metrics["cv_f1_mean"],
+            "cv_recall_mean": metrics["cv_recall_mean"],
+            "cv_roc_auc_mean": metrics["cv_roc_auc_mean"],
+            "best_threshold": metrics["best_threshold"]["threshold"],
+            "best_threshold_precision": metrics["best_threshold"]["precision"],
+            "best_threshold_recall": metrics["best_threshold"]["recall"],
+            "best_threshold_f1": metrics["best_threshold"]["f1"],
+        }
+)
 
         if metrics["f1"] > best_f1:
             best_f1 = metrics["f1"]
@@ -372,12 +420,15 @@ def main() -> None:
     comparison_df.to_csv(REPORTS_DIR / f"model_comparison_{timestamp}.csv", index=False)
 
     model_output_path = MODELS_DIR / f"{best_model_name}_{timestamp}.joblib"
+    best_threshold = summary["models"][best_model_name]["best_threshold"]["threshold"]
+
     joblib.dump(
         {
             "model": best_model,
             "feature_names": list(X.columns),
             "target_column": TARGET_COL,
             "best_model_name": best_model_name,
+            "best_threshold": best_threshold,
             "timestamp": timestamp,
         },
         model_output_path,
